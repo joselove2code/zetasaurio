@@ -4,7 +4,7 @@
 
 A diverse NFT collection representing the unique crazy chicken that lives inside everyone of us.
 
-There are 10,000 randomly generated ZetaSaurios living in the Earth 39.
+There are 10,000 randomly generated ZetaSaurios living in Earth 39, an alternate Metaverse.
 
 ## Awesome quote
 
