@@ -28,7 +28,7 @@ class Config(SimpleNamespace):
 
 
 def get_config() -> Config:
-    config_file = open('generation-config.json')
+    config_file = open('config.json')
     config = json.load(config_file, object_hook=lambda d: Config(**d))
 
     return config

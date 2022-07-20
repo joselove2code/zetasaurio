@@ -1,4 +1,5 @@
 import argparse
+import sys
 
 from generation.services import item_generator, stats_generator
 
@@ -16,7 +17,7 @@ def parse_args() -> GenerateItemsArgs:
     parser = argparse.ArgumentParser('Generate a fixed amount of random collection items.')
     parser.add_argument('amount', type=int, help='The amount of items to generate.')
 
-    return parser.parse_args()
+    return parser.parse_args(sys.argv[2:])
 
 
 def process_args() -> GenerateItemsArgs:

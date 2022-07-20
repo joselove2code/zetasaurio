@@ -3,7 +3,7 @@ from hashlib import sha1, sha256
 
 from PIL.Image import Image
 
-from config import config
+from .config import config
 
 
 class Feature:

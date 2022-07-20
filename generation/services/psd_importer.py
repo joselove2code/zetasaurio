@@ -2,8 +2,8 @@ import os
 import colorama
 from psd_tools import PSDImage
 
-import util
-from config import config
+from .. import utils
+from ..config import config
 
 
 def validate_feature_layer(layer):
@@ -34,7 +34,7 @@ def create_layers_dir():
 
 
 def create_layer_dir(layer_name, layer_order):
-    layer_path = util.layer_path(layer_name, layer_order)
+    layer_path = utils.layer_path(layer_name, layer_order)
 
     if not os.path.exists(layer_path):
         os.mkdir(layer_path)
@@ -42,7 +42,7 @@ def create_layer_dir(layer_name, layer_order):
 
 def create_feature_file(feature: PSDImage, layer_dir):
     feature.visible = True
-    feature_path = util.feature_path(feature.name, layer_dir)
+    feature_path = utils.feature_path(feature.name, layer_dir)
     feature_image = feature.composite()
     feature_image.save(feature_path)
 
@@ -66,7 +66,7 @@ def import_layer(layer: PSDImage, order: int):
 
     create_layer_dir(layer.name, order)
     for feature in layer:
-        import_feature(feature, util.layer_dir(layer.name, order))
+        import_feature(feature, utils.layer_dir(layer.name, order))
 
     print(importing + done)
 

@@ -7,10 +7,10 @@ import colorama
 from PIL.Image import Image
 from PIL import Image as ImageModule
 
-from generation import utils
-from generation.config import Rule, config
-from generation.models import Feature, Item, Layer
-from generation import layers_reader
+from .. import utils
+from ..config import Rule, config
+from ..models import Feature, Item, Layer
+from . import layers_reader
 
 
 def build_image(layers: List[Image]) -> Image:

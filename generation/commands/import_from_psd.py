@@ -1,5 +1,6 @@
 import os
 import argparse
+import sys
 
 from generation.services import psd_importer
 
@@ -17,7 +18,7 @@ def parse_args() -> LoadFromPSDArgs:
     parser = argparse.ArgumentParser('Load collection layers from a PSD file.')
     parser.add_argument('psd_file', type=str, help='A PSD file to load the collection layers from.')
 
-    return parser.parse_args()
+    return parser.parse_args(sys.argv[2:])
 
 
 def process_args() -> LoadFromPSDArgs:

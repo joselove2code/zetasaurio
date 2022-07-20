@@ -4,7 +4,7 @@ from os import path
 import colorama
 
 
-from config import config
+from .config import config
 
 
 def generate_random_percent():

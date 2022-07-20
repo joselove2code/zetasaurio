@@ -1,6 +1,7 @@
 import argparse
+import sys
 
-from generation.services import base_cid_updater
+from ..services import base_cid_updater
 
 
 class UpdateBaseCIDArgs(argparse.Namespace):
@@ -15,7 +16,7 @@ def parse_args() -> UpdateBaseCIDArgs:
     parser = argparse.ArgumentParser('Update the base CID for the images in the metadata.')
     parser.add_argument('cid', type=str, help='A valid IPFS CID for the folder containing the items images.')
 
-    return parser.parse_args()
+    return parser.parse_args(sys.argv[2:])
 
 
 def process_args() -> UpdateBaseCIDArgs:

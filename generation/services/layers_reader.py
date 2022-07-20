@@ -2,9 +2,9 @@ import os
 from os import path
 from typing import List
 
-from generation import utils
-from generation.config import config
-from generation.models import Feature, Layer
+from .. import utils
+from ..config import config
+from ..models import Feature, Layer
 
 
 def split_feature_file(feature_file: str) -> tuple:

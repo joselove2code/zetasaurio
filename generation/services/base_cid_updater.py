@@ -1,7 +1,7 @@
 import os
 from os import path
 
-from generation import utils
+from .. import utils
 
 
 def update_item_base_cid(id: int, cid: str, metadata_file_path: str, total: int):

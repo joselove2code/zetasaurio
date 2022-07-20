@@ -3,9 +3,9 @@ from typing import List
 from os import mkdir, path
 import matplotlib.pyplot as plt
 
-from generation.models import Item
-from generation.config import config
-from generation.services import layers_reader
+from ..models import Item
+from ..config import config
+from ..services import layers_reader
 
 
 def init_layer_distribution() -> dict:
