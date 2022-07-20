@@ -4,17 +4,12 @@
 
 A diverse NFT collection representing the unique crazy chicken that lives inside everyone of us.
 
-There are 10,000 randomly generated ZetaSaurios living in the Ethereum blockchain as ERC-721 tokens and hosted in IPFS.
+There are 10,000 randomly generated ZetaSaurios living in the Earth 39.
 
 ## Awesome quote
 
-"In a world on the brink of collapse,<br>
-where every hope seems lost,<br>
-an unexpected hero will hatch.<br>
-Unleash the chickeness within you<br>
-and help us defeating the greatest menace<br>
-the world has ever faced:<br>
--- The human race."
+"In a world on the brink of collapse, where every hope seems lost, an unexpected hero will hatch.
+Unleash the chickeness within you and help us defeating the greatest menace the world has ever faced: *The human race*"
 
 ## About the code
 
