@@ -68,7 +68,7 @@ contract ZetaSaurio is ERC721Enumerable, Ownable {
     }
 
     function presaleIsActive() public view returns (bool) {
-        return presaleStartTimestamp >= block.timestamp && block.timestamp < (presaleStartTimestamp + presaleDuration);
+        return presaleStartTimestamp <= block.timestamp && block.timestamp < (presaleStartTimestamp + presaleDuration);
     }
 
     function saleIsActive() public view returns (bool) {
@@ -96,7 +96,8 @@ contract ZetaSaurio is ERC721Enumerable, Ownable {
     }
 
     function withdraw() public payable onlyOwner {
-        require(payable(msg.sender).send(address(this).balance));
+        (bool sent,) = payable(owner()).call{value: address(this).balance}("");
+        require(sent, "Failed to send Ether");
     }
 
     /**
@@ -113,8 +114,8 @@ contract ZetaSaurio is ERC721Enumerable, Ownable {
     function mint(uint256 _mintAmount) public payable {
         uint256 supply = totalSupply();
 
-        require(_mintAmount > 0, "Must mint at least one NFT");
         require(saleIsActive() || presaleIsActive(), "Sale is not active");
+        require(_mintAmount > 0, "Must mint at least one NFT");
         require(supply + _mintAmount <= maxSupply, "Supply left is not enough");
         require(msg.value >= price() * _mintAmount, "Not enough funds to purchase");
         require(_mintAmount <= batchMintLimit, "Can't mint these many NFTs at once");
