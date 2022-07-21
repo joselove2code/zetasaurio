@@ -1,6 +1,6 @@
 const timeMachine = require('ganache-time-traveler');
 const Manager = artifacts.require("Manager");
-const ZetaSaurio = artifacts.require("Zetasaurio");
+const ZetaSaurio = artifacts.require("ZetaSaurio");
 const expect = require("../util/expect");
 const getTeamAccounts = require("../util/get-team-accounts");
 
