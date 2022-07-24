@@ -18,8 +18,10 @@
  *
  */
 const fs = require('fs');
+require('dotenv').config();
 const HDWalletProvider = require('@truffle/hdwallet-provider');
 const mnemonic = fs.readFileSync(".secret").toString().trim();
+const { BSCSCAN_API_KEY } = process.env;
 
 module.exports = {
   /**
@@ -95,7 +97,7 @@ module.exports = {
     // }
   // }
   api_keys: {
-    // etherscan: ETHERSCAN_API_KEY,
+    bscscan: BSCSCAN_API_KEY,
   },
-  // plugins: ['truffle-plugin-verify'],
+  plugins: ['truffle-plugin-verify'],
 };
