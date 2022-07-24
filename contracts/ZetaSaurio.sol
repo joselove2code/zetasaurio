@@ -3,6 +3,7 @@
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 
 /*
@@ -27,7 +28,7 @@ import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
                   ___// /__
                 (`(`(---"-`)
 */
-contract ZetaSaurio is ERC721Enumerable, Ownable {
+contract ZetaSaurio is ERC721Enumerable, Ownable, ReentrancyGuard {
     using Strings for uint256;
 
     address public manager;
@@ -112,7 +113,7 @@ contract ZetaSaurio is ERC721Enumerable, Ownable {
         }
     }
 
-    function mint(address _user, uint256 _mintAmount) public payable {
+    function mint(address _user, uint256 _mintAmount) public payable nonReentrant {
         uint256 supply = totalSupply();
 
         require(saleIsActive() || presaleIsActive(), "Sale is not active");
@@ -126,8 +127,8 @@ contract ZetaSaurio is ERC721Enumerable, Ownable {
             require(enoughPresaleMintingsLeft(_user, _mintAmount), "Not enough presale mintings left");
         }
 
+        mintedPerAddress[_user] = _mintAmount;
         for (uint256 i = 1; i <= _mintAmount; i++) {
-            mintedPerAddress[_user]++;
             _safeMint(_user, supply + i);
         }
     }
