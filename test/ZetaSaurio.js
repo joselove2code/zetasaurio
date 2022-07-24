@@ -25,19 +25,19 @@ contract("ZetaSaurio", async accounts => {
     assert.equal(symbol, "ZS");
   });
 
-  it("should have presale end timestamp equals to 0", async () => {
+  it("should have presale end timestamp equals to 0 by default", async () => {
     const presaleEndTimestamp = await contract.presaleEndTimestamp();
 
     assert.equal(presaleEndTimestamp, 0);
   });
 
-  it("should have presale start timestamp equals to 0", async () => {
+  it("should have presale start timestamp equals to 0 by default", async () => {
     const presaleStartTimestamp = await contract.presaleStartTimestamp();
 
     assert.equal(presaleStartTimestamp, 0);
   });
 
-  it("should have sale start timestamp equals to 0", async () => {
+  it("should have sale start timestamp equals to 0 by default", async () => {
     const saleStartTimestamp = await contract.saleStartTimestamp();
 
     assert.equal(saleStartTimestamp, 0);
@@ -121,6 +121,7 @@ contract("ZetaSaurio", async accounts => {
    */
   it("should activate sale just after sale starts", async () => {
     const now = getCurrentTimestamp();
+
     await contract.scheduleSale(now);
     const saleIsActive = await contract.saleIsActive();
 
@@ -128,8 +129,7 @@ contract("ZetaSaurio", async accounts => {
   });
 
   it("shouldn't activate sale before the sale starts", async () => {
-    const now = getCurrentTimestamp();
-    const oneSecondFromNow = now + 1;
+    const oneSecondFromNow = getCurrentTimestamp() + 1;
 
     await contract.scheduleSale(oneSecondFromNow);
     const saleIsActive = await contract.saleIsActive();
@@ -188,7 +188,9 @@ contract("ZetaSaurio", async accounts => {
   });
 
   it("should withdraw correctly", async () => {
-    await contract.scheduleSale(1);
+    const now = getCurrentTimestamp();
+
+    await contract.scheduleSale(now);
     await contract.mint(1, {
       from: accounts[2],
       value: tenBNB,
@@ -236,25 +238,21 @@ contract("ZetaSaurio", async accounts => {
   });
 
   it("should only allow owner to grant presale access", async () => {
-
     await expect(contract.grantPresaleAccess([], { from: accounts[1] }))
       .toThrow(notTheOwnerError);
   });
 
   it("should only allow owner to revoke presale access", async () => {
-
     await expect(contract.revokePresaleAccess([], { from: accounts[1] }))
       .toThrow(notTheOwnerError);
   });
 
   it("should only allow owner to withdraw", async () => {
-
     await expect(contract.withdraw({ from: accounts[1] }))
       .toThrow(notTheOwnerError);
   });
 
   it("should only allow owner to reserve", async () => {
-
     await expect(contract.reserve(30, { from: accounts[1] }))
       .toThrow(notTheOwnerError);
   });
@@ -263,7 +261,6 @@ contract("ZetaSaurio", async accounts => {
    * Presale access management
    */
   it("shouldn't grant presale access by default", async () => {
-
     const account0hasPresaleAccess = await contract.hasPresaleAccess(accounts[0]);
     const account1hasPresaleAccess = await contract.hasPresaleAccess(accounts[1]);
     const account2hasPresaleAccess = await contract.hasPresaleAccess(accounts[2]);
