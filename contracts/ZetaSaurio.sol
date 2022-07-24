@@ -80,8 +80,8 @@ contract ZetaSaurio is ERC721Enumerable, Ownable {
         return presaleIsActive() ? presalePrice : salePrice;
     }
 
-    function enoughPresaleMintingsLeft(uint256 _mintAmount) public view returns (bool) {
-        return mintedPerAddress[msg.sender] + _mintAmount <= presaleMintPerAddressLimit;
+    function enoughPresaleMintingsLeft(address _user, uint256 _mintAmount) public view returns (bool) {
+        return mintedPerAddress[_user] + _mintAmount <= presaleMintPerAddressLimit;
     }
 
     function grantPresaleAccess(address[] calldata _users) public onlyOwner {
@@ -112,7 +112,7 @@ contract ZetaSaurio is ERC721Enumerable, Ownable {
         }
     }
 
-    function mint(uint256 _mintAmount) public payable {
+    function mint(address _user, uint256 _mintAmount) public payable {
         uint256 supply = totalSupply();
 
         require(saleIsActive() || presaleIsActive(), "Sale is not active");
@@ -122,13 +122,13 @@ contract ZetaSaurio is ERC721Enumerable, Ownable {
         require(_mintAmount <= batchMintLimit, "Can't mint these many NFTs at once");
 
         if (presaleIsActive()) {
-            require(hasPresaleAccess[msg.sender], "Presale access denied");
-            require(enoughPresaleMintingsLeft(_mintAmount), "Not enough presale mintings left");
+            require(hasPresaleAccess[_user], "Presale access denied");
+            require(enoughPresaleMintingsLeft(_user, _mintAmount), "Not enough presale mintings left");
         }
 
         for (uint256 i = 1; i <= _mintAmount; i++) {
-            mintedPerAddress[msg.sender]++;
-            _safeMint(msg.sender, supply + i);
+            mintedPerAddress[_user]++;
+            _safeMint(_user, supply + i);
         }
     }
 }

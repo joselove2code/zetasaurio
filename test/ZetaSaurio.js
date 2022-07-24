@@ -189,10 +189,11 @@ contract("ZetaSaurio", async accounts => {
 
   it("should withdraw correctly", async () => {
     const now = getCurrentTimestamp();
+    const account = accounts[2];
 
     await contract.scheduleSale(now);
-    await contract.mint(1, {
-      from: accounts[2],
+    await contract.mint(account, 1, {
+      from: account,
       value: tenBNB,
     });
     
@@ -318,45 +319,51 @@ contract("ZetaSaurio", async accounts => {
    * Minting
    */
   it("should not mint when sale is inactive", async () => {
-    await expect(contract.mint(1)).toThrow("Sale is not active");
+    const account = accounts[2];
+
+    await expect(contract.mint(account, 1)).toThrow("Sale is not active");
   });
 
   it("should not mint less than 1 NFT", async () => {
     const now = getCurrentTimestamp();
+    const account = accounts[2];
 
     await contract.scheduleSale(now);
 
-    await expect(contract.mint(0)).toThrow("Must mint at least one NFT");
+    await expect(contract.mint(account, 0)).toThrow("Must mint at least one NFT");
   });
 
   it("should not mint beyond maxSupply", async () => {
     const now = getCurrentTimestamp();
-
-    await contract.scheduleSale(now);
+    const account = accounts[2];
     const maxSupply = (await contract.maxSupply()).toNumber();
 
-    await expect(contract.mint(maxSupply + 1)).toThrow("Supply left is not enough");
+    await contract.scheduleSale(now);
+
+    await expect(contract.mint(account, maxSupply + 1)).toThrow("Supply left is not enough");
   });
 
   it("should require to pay enough for minting", async () => {
     const now = getCurrentTimestamp();
     const price = await contract.price();
     const priceOf3 = BigInt(String(price)) * 3n;
+    const account = accounts[1];
 
     await contract.scheduleSale(now);
 
-    await expect(contract.mint(3, {
-      from: accounts[1],
+    await expect(contract.mint(account, 3, {
+      from: account,
       value: String(priceOf3 - 1n)
     })).toThrow("Not enough funds to purchase");
   });
 
   it("should update mintedPerAddress correctly when minting", async () => {
     const now = getCurrentTimestamp();
+    const account = accounts[2];
 
     await contract.scheduleSale(now);
-    await contract.mint(3, { value: web3.utils.toWei('0.6')});
-    const mintedPerAddress = await contract.mintedPerAddress(accounts[0]);
+    await contract.mint(account, 3, { value: web3.utils.toWei('0.6')});
+    const mintedPerAddress = await contract.mintedPerAddress(account);
 
     assert.equal(mintedPerAddress.toNumber(), 3);
   });
@@ -364,48 +371,51 @@ contract("ZetaSaurio", async accounts => {
   it("shouldn't allow to mint on presale if access haven't been granted", async () => {
     const now = getCurrentTimestamp();
     const seventyTwoHoursFromNow = now + seventyTwoHours;
+    const account = accounts[1];
 
     await contract.schedulePresale(now, seventyTwoHoursFromNow);
     const price = String(await contract.price());
 
-    await expect(contract.mint(1, {
+    await expect(contract.mint(account, 1, {
       value: price,
-      from: accounts[1],
+      from: account,
     })).toThrow("Presale access denied");
   });
 
   it("should allow to mint on presale if access have been granted", async () => {    
     const now = getCurrentTimestamp();
     const seventyTwoHoursFromNow = now + seventyTwoHours;
+    const account = accounts[1];
 
     await contract.schedulePresale(now, seventyTwoHoursFromNow);
-    await contract.grantPresaleAccess([accounts[1]]);
+    await contract.grantPresaleAccess([account]);
     
     const price = String(await contract.price());
-    await contract.mint(1, {
+    await contract.mint(account, 1, {
       value: price,
-      from: accounts[1],
+      from: account,
     });
     const ownerOfToken = await contract.ownerOf(1);
 
-    assert.equal(ownerOfToken, accounts[1]);
+    assert.equal(ownerOfToken, account);
   });
 
   it("shouldn't allow to mint on presale beyond presaleMintPerAddressLimit", async () => {
     const now = getCurrentTimestamp();
     const seventyTwoHoursFromNow = now + seventyTwoHours;
+    const presaleMintPerAddressLimit = BigInt(await contract.presaleMintPerAddressLimit());
+    const account = accounts[1];
 
     await contract.schedulePresale(now, seventyTwoHoursFromNow);
     await contract.grantPresaleAccess([accounts[1]]);
     
     const price = BigInt(await contract.price());
-    const presaleMintPerAddressLimit = BigInt(await contract.presaleMintPerAddressLimit());
     const batchPrice = String(presaleMintPerAddressLimit * price);
 
-    await contract.mint(1, { from: accounts[1], value: String(price) });
+    await contract.mint(account, 1, { from: accounts[1], value: String(price) });
     await expect(
-      contract.mint(Number(presaleMintPerAddressLimit), {
-        from: accounts[1],
+      contract.mint(account, Number(presaleMintPerAddressLimit), {
+        from: account,
         value: batchPrice,
       })
     ).toThrow("Not enough presale mintings left");
