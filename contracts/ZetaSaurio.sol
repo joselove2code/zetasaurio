@@ -27,32 +27,26 @@ import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
                   ___// /__
                 (`(`(---"-`)
 */
-contract ZetaSaurio is ERC721Enumerable {
+contract ZetaSaurio is ERC721Enumerable, Ownable {
     using Strings for uint256;
 
-    address public owner;
     address public manager;
 
     string public baseURI = "";
 
-    uint256 public saleStart;
-    uint256 public presaleStart;
-    uint256 public constant maxSupply = 10000;
+    uint public saleStartTimestamp;
+    uint public presaleEndTimestamp;
+    uint public presaleStartTimestamp;
+    uint256 public constant maxSupply = 9393;
     uint256 public constant batchMintLimit = 5;
-    uint256 public constant presaleMintPerAddressLimit = 2;
+    uint256 public constant presaleMintPerAddressLimit = 3;
+    uint256 public constant salePrice = 0.2 ether; // 0.2 BNB
+    uint256 public constant presalePrice = 0.15 ether; // 0.15 BNB
 
     mapping(address => bool) public hasPresaleAccess;
     mapping(address => uint256) public mintedPerAddress;
 
-    constructor(address _manager) ERC721("ZetaSaurio", "ZS") {
-        owner = msg.sender;
-        manager = _manager;
-    }
-
-    modifier onlyOwner() {
-        require(owner == msg.sender, "Caller is not the owner");
-        _;
-    }
+    constructor() ERC721("ZetaSaurio", "ZS") {}
 
     /**
      * @dev Base URI for computing {tokenURI} in {ERC721} parent contract.
@@ -65,40 +59,29 @@ contract ZetaSaurio is ERC721Enumerable {
         baseURI = _newBaseURI;
     }
 
-    function schedulePresale(uint256 _start) public onlyOwner {
-        presaleStart = _start;
+    function schedulePresale(uint _presaleStartTimestamp, uint _presaleEndTimestamp   ) public onlyOwner {
+        presaleEndTimestamp = _presaleEndTimestamp;
+        presaleStartTimestamp = _presaleStartTimestamp;
     }
 
-    function scheduleSale(uint256 _start) public onlyOwner {
-        saleStart = _start;
-    }
-
-    function presaleAlphaIsActive() public view returns (bool) {
-        return presaleStart <= block.timestamp && block.timestamp < (presaleStart + 129600);
-    }
-
-    function presaleBetaIsActive() public view returns (bool) {
-        return (presaleStart + 388800) <= block.timestamp && block.timestamp < (presaleStart + 518400);
-    }
-
-    function presaleGammaIsActive() public view returns (bool) {
-        return (presaleStart + 777600) <= block.timestamp && block.timestamp < (presaleStart + 907200);
+    function scheduleSale(uint _saleStartTimestamp) public onlyOwner {
+        saleStartTimestamp = _saleStartTimestamp;
     }
 
     function presaleIsActive() public view returns (bool) {
-        return presaleAlphaIsActive() || presaleBetaIsActive() || presaleGammaIsActive();
+        return presaleStartTimestamp <= block.timestamp && block.timestamp < presaleEndTimestamp;
     }
 
     function saleIsActive() public view returns (bool) {
-        return saleStart != 0 && saleStart <= block.timestamp;
+        return saleStartTimestamp != 0 && saleStartTimestamp <= block.timestamp;
     }
 
-    function cost() public view virtual returns (uint256) {
-        if (presaleAlphaIsActive()) return 0.04 ether;
-        if (presaleBetaIsActive()) return 0.05 ether;
-        if (presaleGammaIsActive()) return 0.06 ether;
+    function price() public view virtual returns (uint256) {
+        return presaleIsActive() ? presalePrice : salePrice;
+    }
 
-        return 0.08 ether;
+    function enoughPresaleMintingsLeft(address _user, uint256 _mintAmount) public view returns (bool) {
+        return mintedPerAddress[_user] + _mintAmount <= presaleMintPerAddressLimit;
     }
 
     function grantPresaleAccess(address[] calldata _users) public onlyOwner {
@@ -114,11 +97,12 @@ contract ZetaSaurio is ERC721Enumerable {
     }
 
     function withdraw() public payable onlyOwner {
-        require(payable(manager).send(address(this).balance));
+        (bool sent,) = payable(owner()).call{value: address(this).balance}("");
+        require(sent, "Failed to send Ether");
     }
 
     /**
-     * Reserve zetas for team and giveaways.
+     * Reserve zetas for the team and giveaways.
      */
     function reserve(uint256 _amount) public onlyOwner {
         uint256 supply = totalSupply();
@@ -128,26 +112,23 @@ contract ZetaSaurio is ERC721Enumerable {
         }
     }
 
-    function mint(uint256 _mintAmount) public payable {
+    function mint(address _user, uint256 _mintAmount) public payable {
         uint256 supply = totalSupply();
 
         require(saleIsActive() || presaleIsActive(), "Sale is not active");
         require(_mintAmount > 0, "Must mint at least one NFT");
         require(supply + _mintAmount <= maxSupply, "Supply left is not enough");
+        require(msg.value >= _mintAmount * price(), "Not enough funds to purchase");
         require(_mintAmount <= batchMintLimit, "Can't mint these many NFTs at once");
-        require(msg.value >= cost() * _mintAmount, "Not enough funds to purchase");
 
         if (presaleIsActive()) {
-            require(hasPresaleAccess[msg.sender], "Presale access denied");
-            require(
-                mintedPerAddress[msg.sender] + _mintAmount < presaleMintPerAddressLimit,
-                "Not enough presale mintings left"
-            );
+            require(hasPresaleAccess[_user], "Presale access denied");
+            require(enoughPresaleMintingsLeft(_user, _mintAmount), "Not enough presale mintings left");
         }
 
         for (uint256 i = 1; i <= _mintAmount; i++) {
-            mintedPerAddress[msg.sender]++;
-            _safeMint(msg.sender, supply + i);
+            mintedPerAddress[_user]++;
+            _safeMint(_user, supply + i);
         }
     }
 }

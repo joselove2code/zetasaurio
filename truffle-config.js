@@ -17,23 +17,11 @@
  * phrase from a file you've .gitignored so it doesn't accidentally become public.
  *
  */
-
-const Web3 = require('web3');
-const web3 = new Web3();
-const dotenv = require('dotenv');
+const fs = require('fs');
+require('dotenv').config();
 const HDWalletProvider = require('@truffle/hdwallet-provider');
-
-dotenv.config();
-const {
-  INFURA_PROJECT_ID,
-  RINKEBY_PRIVATE_KEY,
-  MAINNET_PRIVATE_KEY,
-  ETHERSCAN_API_KEY,
-} = process.env;
-
-const INFURA_RINKEBY_URL =`https://rinkeby.infura.io/v3/${INFURA_PROJECT_ID}`;
-const INFURA_ROPSTEN_URL =`https://ropsten.infura.io/v3/${INFURA_PROJECT_ID}`;
-const INFURA_MAINNET_URL = `https://mainnet.infura.io/v3/${INFURA_PROJECT_ID}`;
+const mnemonic = fs.readFileSync(".secret").toString().trim();
+const { BSCSCAN_API_KEY } = process.env;
 
 module.exports = {
   /**
@@ -48,35 +36,23 @@ module.exports = {
 
   networks: {
     development: {
-     host: "localhost",                       // Localhost (default: none)
-     port: 8545,                              // Standard Ethereum port (default: none)
-     network_id: "*",                         // Any network (default: none)
-     gasPrice: web3.utils.toWei('50', 'gwei') // 50 gwei (in wei) (default: 100 gwei)
+      host: "127.0.0.1",     // Localhost (default: none)
+      port: 8545,            // Standard BSC port (default: none)
+      network_id: "*",       // Any network (default: none)
     },
-    rinkeby: {
-      provider: () => new HDWalletProvider({
-        privateKeys: [RINKEBY_PRIVATE_KEY],
-        providerOrUrl: INFURA_RINKEBY_URL,
-      }),
-      network_id: 4,                            // Rinkeby's id
-      gas: 5500000,                             // Rinkeby has a lower block limit than mainnet
-      gasPrice: web3.utils.toWei('50', 'gwei'), // 50 gwei (in wei) (default: 100 gwei)
-      confirmations: 2,                         // # of confirmations to wait between deployments. (default: 0)
-      timeoutBlocks: 200,                       // # of blocks before a deployment times out  (minimum/default: 50)
-      skipDryRun: true,                         // Skip dry run before migrations? (default: false for public nets )
-      networkCheckTimeout: 100000
+    testnet: {
+      provider: () => new HDWalletProvider(mnemonic, `https://data-seed-prebsc-1-s1.binance.org:8545`),
+      network_id: 97,
+      confirmations: 10,
+      timeoutBlocks: 200,
+      skipDryRun: true
     },
-    mainnet: {
-      provider: () => new HDWalletProvider({
-        privateKeys: [MAINNET_PRIVATE_KEY],
-        providerOrUrl: INFURA_MAINNET_URL,
-      }),
-      network_id: 1,                            // Mainnet's id
-      gas: 8500000,                             // Gas sent with each transaction (default: ~6700000)
-      gasPrice: web3.utils.toWei('50', 'gwei'), // 50 gwei (in wei) (default: 100 gwei)
-      confirmations: 2,                         // # of confirmations to wait between deployments. (default: 0)
-      timeoutBlocks: 200,                       // # of blocks before a deployment times out  (minimum/default: 50)
-      networkCheckTimeout: 100000,
+    bsc: {
+      provider: () => new HDWalletProvider(mnemonic, `https://bsc-dataseed1.binance.org`),
+      network_id: 56,
+      confirmations: 10,
+      timeoutBlocks: 200,
+      skipDryRun: true
     },
   },
 
@@ -121,7 +97,7 @@ module.exports = {
     // }
   // }
   api_keys: {
-    etherscan: ETHERSCAN_API_KEY,
+    bscscan: BSCSCAN_API_KEY,
   },
   plugins: ['truffle-plugin-verify'],
 };

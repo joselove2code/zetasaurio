@@ -1,6 +1,6 @@
 {
-  "collection_name": "Zetasaurio",
-  "collection_description": "A diverse collection of bad-ass unique chickens fighting to save the planet of it bigger enemy: the human race.",
+  "collection_name": "ZetaSaurio",
+  "collection_description": "A diverse collection of bad-ass unique chickens fighting to save the planet of its biggest enemy: the human race.",
   "base_image_uri": "ipfs://{base_cid}/{id}.png",
   "width": 3600,
   "height": 3600,

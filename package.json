@@ -1,34 +1,33 @@
 {
-  "name": "nft-toolbox",
+  "name": "zetasaurio",
   "version": "1.0.0",
-  "description": "A set of tools to work with NFTs.",
+  "description": "A set of tools to build and deploy the ZetaSaurio NFT Collection.",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "truffle test"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/joselove2code/nft-toolbox.git"
+    "url": "git+https://github.com/joselove2code/zetasaurio.git"
   },
   "keywords": [
-    "nft",
-    "nft-collection",
-    "nft-generation"
+    "NFT",
+    "ZetaSaurio",
+    "NFT Collection"
   ],
-  "author": "Jose Ignacio Cruz Moreira",
+  "author": "José Ignacio Cruz Moreira",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/joselove2code/nft-toolbox/issues"
+    "url": "https://github.com/joselove2code/zetasaurio/issues"
   },
-  "homepage": "https://github.com/joselove2code/nft-toolbox#readme",
+  "homepage": "https://github.com/joselove2code/zetasaurio#readme",
   "dependencies": {
-    "@truffle/hdwallet-provider": "^1.5.1",
-    "dotenv": "^10.0.0",
-    "ganache-time-traveler": "^1.0.16",
-    "web3": "^1.6.0"
+    "@truffle/hdwallet-provider": "^2.0.11",
+    "dotenv": "^16.0.1",
+    "web3": "^1.7.4"
   },
   "devDependencies": {
-    "@openzeppelin/contracts": "^4.3.2",
-    "truffle-plugin-verify": "^0.5.20"
+    "@openzeppelin/contracts": "^4.7.1",
+    "truffle-plugin-verify": "^0.5.26"
   }
 }
