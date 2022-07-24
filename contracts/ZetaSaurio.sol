@@ -34,14 +34,14 @@ contract ZetaSaurio is ERC721Enumerable, Ownable {
 
     string public baseURI = "";
 
-    uint256 public saleStartTimestamp;
-    uint256 public presaleStartTimestamp;
+    uint public saleStartTimestamp;
+    uint public presaleEndTimestamp;
+    uint public presaleStartTimestamp;
     uint256 public constant maxSupply = 9393;
     uint256 public constant batchMintLimit = 5;
     uint256 public constant presaleMintPerAddressLimit = 3;
     uint256 public constant salePrice = 0.2 ether; // 0.2 BNB
     uint256 public constant presalePrice = 0.15 ether; // 0.15 BNB
-    uint256 public constant presaleDuration = 259200; // 72 hours
 
     mapping(address => bool) public hasPresaleAccess;
     mapping(address => uint256) public mintedPerAddress;
@@ -59,16 +59,17 @@ contract ZetaSaurio is ERC721Enumerable, Ownable {
         baseURI = _newBaseURI;
     }
 
-    function schedulePresale(uint256 _presaleStartTimestamp) public onlyOwner {
+    function schedulePresale(uint _presaleStartTimestamp, uint _presaleEndTimestamp   ) public onlyOwner {
+        presaleEndTimestamp = _presaleEndTimestamp;
         presaleStartTimestamp = _presaleStartTimestamp;
     }
 
-    function scheduleSale(uint256 _saleStartTimestamp) public onlyOwner {
+    function scheduleSale(uint _saleStartTimestamp) public onlyOwner {
         saleStartTimestamp = _saleStartTimestamp;
     }
 
     function presaleIsActive() public view returns (bool) {
-        return presaleStartTimestamp <= block.timestamp && block.timestamp < (presaleStartTimestamp + presaleDuration);
+        return presaleStartTimestamp <= block.timestamp && block.timestamp < presaleEndTimestamp;
     }
 
     function saleIsActive() public view returns (bool) {
@@ -80,7 +81,7 @@ contract ZetaSaurio is ERC721Enumerable, Ownable {
     }
 
     function enoughPresaleMintingsLeft(uint256 _mintAmount) public view returns (bool) {
-        return mintedPerAddress[msg.sender] + _mintAmount < presaleMintPerAddressLimit;
+        return mintedPerAddress[msg.sender] + _mintAmount <= presaleMintPerAddressLimit;
     }
 
     function grantPresaleAccess(address[] calldata _users) public onlyOwner {
@@ -117,7 +118,7 @@ contract ZetaSaurio is ERC721Enumerable, Ownable {
         require(saleIsActive() || presaleIsActive(), "Sale is not active");
         require(_mintAmount > 0, "Must mint at least one NFT");
         require(supply + _mintAmount <= maxSupply, "Supply left is not enough");
-        require(msg.value >= price() * _mintAmount, "Not enough funds to purchase");
+        require(msg.value >= _mintAmount * price(), "Not enough funds to purchase");
         require(_mintAmount <= batchMintLimit, "Can't mint these many NFTs at once");
 
         if (presaleIsActive()) {

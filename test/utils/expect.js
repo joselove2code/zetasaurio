@@ -3,10 +3,8 @@ module.exports = promise => ({
     try {
       await promise;
     } catch (error) {
-      assert.equal(
-        error.reason, reason,
-        `Expected to throw "${reason}"" but threw "${error.reason}"" instead`
-      );
+      const assertMessage = `Expected to throw "${reason}"" but threw "${error.reason}"" instead`;
+      assert.equal(error.reason, reason, assertMessage);
       return;
     }
 
