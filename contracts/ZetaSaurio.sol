@@ -127,7 +127,7 @@ contract ZetaSaurio is ERC721Enumerable, Ownable, ReentrancyGuard {
             require(enoughPresaleMintingsLeft(_user, _mintAmount), "Not enough presale mintings left");
         }
 
-        mintedPerAddress[_user] = _mintAmount;
+        mintedPerAddress[_user] += _mintAmount;
         for (uint256 i = 1; i <= _mintAmount; i++) {
             _safeMint(_user, supply + i);
         }

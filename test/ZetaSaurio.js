@@ -362,10 +362,15 @@ contract("ZetaSaurio", async accounts => {
     const account = accounts[2];
 
     await contract.scheduleSale(now);
-    await contract.mint(account, 3, { value: web3.utils.toWei('0.6')});
-    const mintedPerAddress = await contract.mintedPerAddress(account);
+    await contract.mint(account, 2, { value: web3.utils.toWei('0.4')});
+    let mintedPerAddress = await contract.mintedPerAddress(account);
 
-    assert.equal(mintedPerAddress.toNumber(), 3);
+    assert.equal(mintedPerAddress.toNumber(), 2);
+
+    await contract.mint(account, 2, { value: web3.utils.toWei('0.4')});
+    mintedPerAddress = await contract.mintedPerAddress(account);
+
+    assert.equal(mintedPerAddress.toNumber(), 4);
   });
 
   it("shouldn't allow to mint on presale if access haven't been granted", async () => {
