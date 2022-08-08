@@ -265,7 +265,8 @@ dist
 .yarn/install-state.gz
 .pnp.*
 
-# TOP SECRET: mnemonic and generated metadata 🤫
+# TOP SECRET: mnemonic and metadata 🤫
 *.secret
+*.psd
 build/items
 build/layers
