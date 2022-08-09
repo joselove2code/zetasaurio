@@ -9,16 +9,17 @@ from ..models import Feature, Layer
 
 def split_feature_file(feature_file: str) -> tuple:
     without_extension = path.splitext(feature_file)[0]
-    (feature_name, feature_rarity) = without_extension.split(config.rarity_separator)
+    feature_name, feature_rarity, *feature_set_tuple = without_extension.split(config.rarity_separator)
+    feature_set = feature_set_tuple[0] if len(feature_set_tuple) == 1 else None
 
-    return (feature_name, float(feature_rarity))
+    return feature_name, float(feature_rarity), feature_set
 
 
 def read_feature(feature_file: str, layer_dir: str) -> Feature:
     feature_path = utils.feature_path(feature_file, layer_dir, False)
-    (feature_name, feature_rarity) = split_feature_file(feature_file)
+    feature_name, feature_rarity, feature_set = split_feature_file(feature_file)
 
-    return Feature(feature_name, feature_path, feature_rarity)
+    return Feature(feature_name, feature_path, feature_rarity, feature_set)
 
 
 def split_layer_dir(layer_dir: str) -> tuple:
