@@ -1,10 +1,10 @@
 {
   "collection_name": "ZetaSaurio",
   "collection_description": "A diverse collection of bad-ass unique chickens fighting to save the planet of its biggest enemy: the human race.",
-  "base_image_uri": "ipfs://{base_cid}/{id}.png",
+  "base_image_uri": "{base_cid}/{id}.png",
   "width": 3600,
   "height": 3600,
-  "max_items": 10000,
+  "max_items": 9393,
   "items_dir": "build/items",
   "layers_dir": "build/layers",
   "order_separator": "#",
