@@ -31,10 +31,19 @@ import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 contract ZetaSaurio is ERC721Enumerable, Ownable, ReentrancyGuard {
     using Strings for uint256;
 
-    address public manager;
+    struct Partnership {
+        // The discount percent given to the partner
+        uint256 discountPercent;
+        // The amount of discounted tokens given to the partner
+        uint256 discountedSupply;
+        // The amount of free to mint tokesns given to the partner
+        uint256 freeToMintSupply;
+        // The timestamp until which the supply will be reserved
+        uint reservedUntilTimestamp;
+    }
 
+    address[] partners;
     string public baseURI = "";
-
     uint public saleStartTimestamp;
     uint public presaleEndTimestamp;
     uint public presaleStartTimestamp;
@@ -43,9 +52,9 @@ contract ZetaSaurio is ERC721Enumerable, Ownable, ReentrancyGuard {
     uint256 public constant presaleMintPerAddressLimit = 3;
     uint256 public constant salePrice = 0.2 ether; // 0.2 BNB
     uint256 public constant presalePrice = 0.15 ether; // 0.15 BNB
-
     mapping(address => bool) public hasPresaleAccess;
     mapping(address => uint256) public mintedPerAddress;
+    mapping(address => Partnership) public partnerships;
 
     constructor() ERC721("ZetaSaurio", "ZS") {}
 
@@ -58,6 +67,37 @@ contract ZetaSaurio is ERC721Enumerable, Ownable, ReentrancyGuard {
 
     function setBaseURI(string memory _newBaseURI) public onlyOwner {
         baseURI = _newBaseURI;
+    }
+
+    function partnershipTotalSupply(address _partner) public view returns (uint256) {
+        return partnerships[_partner].discountedSupply + partnerships[_partner].freeToMintSupply;
+    }
+
+    function partnershipExists(address _partner) public view returns (bool) {
+        return partnerships[_partner].reservedUntilTimestamp != 0;
+    }
+
+    function partnershipSupplyIsReserved(address _partner) public view returns (bool) {
+        return partnerships[_partner].reservedUntilTimestamp >= block.timestamp;
+    }
+
+    function createOrUpdatePartnership(
+        address _partner,
+        uint256 _discountPercent,
+        uint256 _discountedSupply,
+        uint256 _freeToMintSupply,
+        uint _reservedUntilTimestamp
+    ) public onlyOwner {
+        if (!partnershipExists(_partner)) {
+            partners.push(_partner);
+        }
+
+        partnerships[_partner] = Partnership(
+            _discountPercent,
+            _discountedSupply,
+            _freeToMintSupply,
+            _reservedUntilTimestamp
+        );
     }
 
     function schedulePresale(uint _presaleStartTimestamp, uint _presaleEndTimestamp   ) public onlyOwner {
@@ -78,7 +118,25 @@ contract ZetaSaurio is ERC721Enumerable, Ownable, ReentrancyGuard {
     }
 
     function price() public view virtual returns (uint256) {
-        return presaleIsActive() ? presalePrice : salePrice;
+        uint256 currentPrice = presaleIsActive() ? presalePrice : salePrice;
+
+        if (partnershipExists(msg.sender)) {
+            return currentPrice * partnerships[msg.sender].discountPercent / 100;
+        }
+
+        return currentPrice;
+    }
+
+    function currentSupply() public view virtual returns (uint256) {
+        uint256 supply = totalSupply();
+
+        for (uint256 i = 0; i < partners.length; i++) {
+            if(partnershipSupplyIsReserved(partners[i])) {
+                supply += partnershipTotalSupply(partners[i]);
+            }
+        }
+
+        return supply;
     }
 
     function enoughPresaleMintingsLeft(address _user, uint256 _mintAmount) public view returns (bool) {
@@ -97,24 +155,23 @@ contract ZetaSaurio is ERC721Enumerable, Ownable, ReentrancyGuard {
         }
     }
 
-    function withdraw() public payable onlyOwner {
-        (bool sent,) = payable(owner()).call{value: address(this).balance}("");
-        require(sent, "Failed to send Ether");
+    function validatePresale(address _user, uint256 _mintAmount) internal view {
+        if (presaleIsActive()) {
+            require(hasPresaleAccess[_user], "Presale access denied");
+            require(enoughPresaleMintingsLeft(_user, _mintAmount), "Not enough presale mintings left");
+        }
     }
 
-    /**
-     * Reserve zetas for the team and giveaways.
-     */
-    function reserve(uint256 _amount) public onlyOwner {
-        uint256 supply = totalSupply();
+    function validateAndUpdatePartnership(uint256 _mintAmount) internal {
+        if (partnershipExists(msg.sender)) {
+            require(partnerships[msg.sender].discountedSupply > _mintAmount, "Not enough partner mints left");
 
-        for (uint256 i = 1; i <= _amount; i++) {
-            _safeMint(msg.sender, supply + i);
+            partnerships[msg.sender].discountedSupply -= _mintAmount;
         }
     }
 
     function mint(address _user, uint256 _mintAmount) public payable nonReentrant {
-        uint256 supply = totalSupply();
+        uint256 supply = currentSupply();
 
         require(saleIsActive() || presaleIsActive(), "Sale is not active");
         require(_mintAmount > 0, "Must mint at least one NFT");
@@ -122,14 +179,28 @@ contract ZetaSaurio is ERC721Enumerable, Ownable, ReentrancyGuard {
         require(msg.value >= _mintAmount * price(), "Not enough funds to purchase");
         require(_mintAmount <= batchMintLimit, "Can't mint these many NFTs at once");
 
-        if (presaleIsActive()) {
-            require(hasPresaleAccess[_user], "Presale access denied");
-            require(enoughPresaleMintingsLeft(_user, _mintAmount), "Not enough presale mintings left");
-        }
+        validatePresale(_user, _mintAmount);
+        validateAndUpdatePartnership(_mintAmount);
 
         mintedPerAddress[_user] += _mintAmount;
         for (uint256 i = 1; i <= _mintAmount; i++) {
             _safeMint(_user, supply + i);
         }
+    }
+
+    /**
+     * Reserve zetas for the team and giveaways.
+     */
+    function reserve(uint256 _amount) public onlyOwner {
+        uint256 supply = currentSupply();
+
+        for (uint256 i = 1; i <= _amount; i++) {
+            _safeMint(msg.sender, supply + i);
+        }
+    }
+
+    function withdraw() public payable onlyOwner {
+        (bool sent,) = payable(owner()).call{value: address(this).balance}("");
+        require(sent, "Failed to send Ether");
     }
 }
