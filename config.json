@@ -9,7 +9,7 @@
   "layers_dir": "build/layers",
   "order_separator": "#",
   "rarity_separator": "%",
-  "random_seed": 526,
+  "random_seed": 39,
   "omit_in_dna": ["Background"],
   "rules": [
     {

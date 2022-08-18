@@ -2,9 +2,9 @@
 
 ## What is ZetaSaurio?
 
-A diverse NFT collection representing the unique crazy chicken that lives inside everyone of us.
+ZetaSaurio is a NFT collection of 9393 anthropomorphic chickens, which are the last living descendants of an ancient civilization of dinosaurs. They live on Earth 39, a post-apocalyptic version of our planet into the Metaverse.
 
-There are 10,000 randomly generated ZetaSaurios living in Earth 39, an alternative incredible Metaverse.
+There are 9393 randomly generated ZetaSaurios living in Earth 39, an alternative incredible Metaverse.
 
 ## Awesome quote
 
