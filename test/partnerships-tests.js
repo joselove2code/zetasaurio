@@ -71,6 +71,69 @@ contract("ZetaSaurio/partnerships", async accounts => {
     assert.equal(true, partnershipExists);
   });
 
+  it("partnership supply should be reserve until reserved timestamp", async () => {
+    const partner = accounts[2];
+    const label = "BoredApeYachtClub";
+    const discountPercent = 20;
+    const discountedSupply = 100;
+    const freeToMintSupply = 50;
+    const reservedUntilTimestamp = getCurrentTimestamp();
+    
+    await contract.createPartnership(
+      partner,
+      label,
+      discountPercent,
+      discountedSupply,
+      freeToMintSupply,
+      reservedUntilTimestamp
+    );
+    const partnershipSupplyIsReserved = await contract.partnershipSupplyIsReserved(partner);
+
+    assert.equal(true, partnershipSupplyIsReserved);
+  });
+
+  it("partnership supply should not be reserve beyond reserved timestamp", async () => {
+    const partner = accounts[2];
+    const label = "BoredApeYachtClub";
+    const discountPercent = 20;
+    const discountedSupply = 100;
+    const freeToMintSupply = 50;
+    const reservedUntilTimestamp = getCurrentTimestamp() - 1;
+    
+    await contract.createPartnership(
+      partner,
+      label,
+      discountPercent,
+      discountedSupply,
+      freeToMintSupply,
+      reservedUntilTimestamp
+    );
+    const partnershipSupplyIsReserved = await contract.partnershipSupplyIsReserved(partner);
+
+    assert.equal(false, partnershipSupplyIsReserved);
+  });
+
+  it("partnership total supply should add up", async () => {
+    const partner = accounts[2];
+    const label = "BoredApeYachtClub";
+    const discountPercent = 20;
+    const discountedSupply = 100;
+    const freeToMintSupply = 50;
+    const reservedUntilTimestamp = getCurrentTimestamp() - 1;
+    
+    await contract.createPartnership(
+      partner,
+      label,
+      discountPercent,
+      discountedSupply,
+      freeToMintSupply,
+      reservedUntilTimestamp
+    );
+    const partnershipTotalSupply = await contract.partnershipTotalSupply(partner);
+
+    assert.equal(150, partnershipTotalSupply);
+  });
+
   it("should not allow to create duplicated partnership", async () => {
     const partner = accounts[2];
     const label = "BoredApeYachtClub";
