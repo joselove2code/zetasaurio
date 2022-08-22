@@ -32,14 +32,18 @@ contract ZetaSaurio is ERC721Enumerable, Ownable, ReentrancyGuard {
     using Strings for uint256;
 
     struct Partnership {
+        // The human-readable identifier of the partnership
+        string label;
         // The discount percent given to the partner
         uint256 discountPercent;
         // The amount of discounted tokens given to the partner
         uint256 discountedSupply;
-        // The amount of free to mint tokesns given to the partner
+        // The amount of free to mint tokens given to the partner
         uint256 freeToMintSupply;
         // The timestamp until which the supply will be reserved
         uint reservedUntilTimestamp;
+        // Just a marker to know if a patnership exists
+        bool exists;
     }
 
     address[] partners;
@@ -69,38 +73,55 @@ contract ZetaSaurio is ERC721Enumerable, Ownable, ReentrancyGuard {
         baseURI = _newBaseURI;
     }
 
-    function partnershipTotalSupply(address _partner) public view returns (uint256) {
-        return partnerships[_partner].discountedSupply + partnerships[_partner].freeToMintSupply;
-    }
-
     function partnershipExists(address _partner) public view returns (bool) {
-        return partnerships[_partner].reservedUntilTimestamp != 0;
+        return partnerships[_partner].exists;
     }
 
     function partnershipSupplyIsReserved(address _partner) public view returns (bool) {
         return partnerships[_partner].reservedUntilTimestamp >= block.timestamp;
     }
 
-    function createOrUpdatePartnership(
+    function partnershipTotalSupply(address _partner) public view returns (uint256) {
+        return partnerships[_partner].discountedSupply + partnerships[_partner].freeToMintSupply;
+    }
+
+    function createPartnership(
         address _partner,
+        string memory _label,
         uint256 _discountPercent,
         uint256 _discountedSupply,
         uint256 _freeToMintSupply,
         uint _reservedUntilTimestamp
     ) public onlyOwner {
-        if (!partnershipExists(_partner)) {
-            partners.push(_partner);
-        }
+        require(!partnershipExists(_partner), "Partnership already exists");
+        
+        partners.push(_partner);
 
         partnerships[_partner] = Partnership(
+            _label,
             _discountPercent,
             _discountedSupply,
             _freeToMintSupply,
-            _reservedUntilTimestamp
+            _reservedUntilTimestamp,
+            true
         );
     }
 
-    function schedulePresale(uint _presaleStartTimestamp, uint _presaleEndTimestamp   ) public onlyOwner {
+    function deletePartnership(address _partner) public onlyOwner {        
+        require(partnershipExists(_partner), "Partnership does not exist");
+
+        partnerships[_partner].exists = false;
+
+        for (uint256 index = 0; index < partners.length; index++) {
+            if (partners[index] == _partner) {
+                partners[index] = partners[partners.length - 1];
+                partners.pop();
+                break;
+            }
+        }
+    }
+
+    function schedulePresale(uint _presaleStartTimestamp, uint _presaleEndTimestamp) public onlyOwner {
         presaleEndTimestamp = _presaleEndTimestamp;
         presaleStartTimestamp = _presaleStartTimestamp;
     }
@@ -201,6 +222,6 @@ contract ZetaSaurio is ERC721Enumerable, Ownable, ReentrancyGuard {
 
     function withdraw() public payable onlyOwner {
         (bool sent,) = payable(owner()).call{value: address(this).balance}("");
-        require(sent, "Failed to send Ether");
+        require(sent, "Failed to withdraw");
     }
 }
