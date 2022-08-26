@@ -46,7 +46,7 @@ contract ZetaSaurio is ERC721Enumerable, Ownable, ReentrancyGuard {
         bool exists;
     }
 
-    address[] partners;
+    address[] public partners;
     string public baseURI = "";
     uint public saleStartTimestamp;
     uint public presaleEndTimestamp;
@@ -79,6 +79,10 @@ contract ZetaSaurio is ERC721Enumerable, Ownable, ReentrancyGuard {
     }
 
     // Utility
+
+    function partnersCount() public view returns (uint256) {
+        return partners.length;
+    }
 
     function partnershipExists(address _partner) public view returns (bool) {
         return partnerships[_partner].exists;
@@ -168,10 +172,6 @@ contract ZetaSaurio is ERC721Enumerable, Ownable, ReentrancyGuard {
 
     // Only owner
 
-    function setBaseURI(string memory _newBaseURI) public onlyOwner {
-        baseURI = _newBaseURI;
-    }
-
     function scheduleSale(uint _saleStartTimestamp) public onlyOwner {
         saleStartTimestamp = _saleStartTimestamp;
     }
@@ -240,7 +240,11 @@ contract ZetaSaurio is ERC721Enumerable, Ownable, ReentrancyGuard {
         require(sent, "Failed to withdraw");
     }
 
-    // Override
+    // Base URI
+
+    function setBaseURI(string memory _newBaseURI) public onlyOwner {
+        baseURI = _newBaseURI;
+    }
 
     /**
      * @dev Base URI for computing {tokenURI} in {ERC721} parent contract.
