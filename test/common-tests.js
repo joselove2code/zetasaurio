@@ -108,7 +108,7 @@ contract("ZetaSaurio/common", async accounts => {
 
   it("should reserve correctly", async () => {
     const supplyBefore = await contract.totalSupply();
-    await contract.reserve(5);
+    await contract.reserve(accounts[0], 5);
     const supplyAfter = await contract.totalSupply();
 
     assert.equal(supplyBefore.toNumber() + 5, supplyAfter.toNumber());
@@ -171,8 +171,7 @@ contract("ZetaSaurio/common", async accounts => {
   });
 
   it("should only allow owner to reserve", async () => {
-    await expect(contract.reserve(30, { from: accounts[1] }))
-      .toThrow(notTheOwnerError);
+    await expect(contract.reserve(accounts[1], 30, { from: accounts[1] })).toThrow(notTheOwnerError);
   });
 
   it("should price 0.2 BNB on public sale", async () => {

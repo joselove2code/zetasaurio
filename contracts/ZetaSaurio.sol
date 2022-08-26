@@ -148,8 +148,8 @@ contract ZetaSaurio is ERC721Enumerable, Ownable, ReentrancyGuard {
         return currentPrice;
     }
 
-    function currentSupply() public view virtual returns (uint256) {
-        uint256 supply = totalSupply();
+    function reservedSupply() public view virtual returns (uint256) {
+        uint256 supply = 0;
 
         for (uint256 i = 0; i < partners.length; i++) {
             if(partnershipSupplyIsReserved(partners[i])) {
@@ -176,6 +176,13 @@ contract ZetaSaurio is ERC721Enumerable, Ownable, ReentrancyGuard {
         }
     }
 
+    function validateSale(uint256 _mintAmount) internal view {
+        require(saleIsActive() || presaleIsActive(), "Sale is not active");
+        require(_mintAmount > 0, "Must mint at least one NFT");
+        require(totalSupply() + reservedSupply() + _mintAmount <= maxSupply, "Supply left is not enough");
+        require(msg.value >= _mintAmount * price(), "Not enough funds to purchase");        
+    }
+
     function validatePresale(address _user, uint256 _mintAmount) internal view {
         if (presaleIsActive()) {
             require(hasPresaleAccess[_user], "Presale access denied");
@@ -185,39 +192,46 @@ contract ZetaSaurio is ERC721Enumerable, Ownable, ReentrancyGuard {
 
     function validateAndUpdatePartnership(uint256 _mintAmount) internal {
         if (partnershipExists(msg.sender)) {
-            require(partnerships[msg.sender].discountedSupply > _mintAmount, "Not enough partner mints left");
-
+            require(partnerships[msg.sender].discountedSupply >= _mintAmount, "Not enough partner mints left");
             partnerships[msg.sender].discountedSupply -= _mintAmount;
         }
     }
 
-    function mint(address _user, uint256 _mintAmount) public payable nonReentrant {
-        uint256 supply = currentSupply();
-
-        require(saleIsActive() || presaleIsActive(), "Sale is not active");
-        require(_mintAmount > 0, "Must mint at least one NFT");
-        require(supply + _mintAmount <= maxSupply, "Supply left is not enough");
-        require(msg.value >= _mintAmount * price(), "Not enough funds to purchase");
-        require(_mintAmount <= batchMintLimit, "Can't mint these many NFTs at once");
-
-        validatePresale(_user, _mintAmount);
-        validateAndUpdatePartnership(_mintAmount);
-
+    function mintMany(address _user, uint256 _mintAmount) internal {
+        uint256 supply = totalSupply();
         mintedPerAddress[_user] += _mintAmount;
+
         for (uint256 i = 1; i <= _mintAmount; i++) {
             _safeMint(_user, supply + i);
         }
     }
 
-    /**
-     * Reserve zetas for the team and giveaways.
-     */
-    function reserve(uint256 _amount) public onlyOwner {
-        uint256 supply = currentSupply();
+    function mint(address _user, uint256 _mintAmount) public payable nonReentrant {
+        validateSale(_mintAmount);
+        validatePresale(_user, _mintAmount);
+        validateAndUpdatePartnership(_mintAmount);
 
-        for (uint256 i = 1; i <= _amount; i++) {
-            _safeMint(msg.sender, supply + i);
-        }
+        mintMany(_user, _mintAmount);
+    }
+
+    function validateAndUpdateFreeMint(uint256 _mintAmount) internal {
+        require(partnershipExists(msg.sender), "Only partners have access to free mints");        
+        require(totalSupply() + _mintAmount + reservedSupply() <= maxSupply, "Supply left is not enough");
+        require(partnerships[msg.sender].freeToMintSupply > _mintAmount, "Not enough partner free mints left");
+
+        partnerships[msg.sender].freeToMintSupply -= _mintAmount;
+    }
+
+    function freeMint(address _user, uint256 _mintAmount) public payable nonReentrant {
+        validateAndUpdateFreeMint(_mintAmount);
+
+        mintMany(_user, _mintAmount);
+    }
+
+    function reserve(address _user, uint256 _mintAmount) public onlyOwner {
+        require(totalSupply() + _mintAmount + reservedSupply() <= maxSupply, "Supply left is not enough");
+
+        mintMany(_user, _mintAmount);
     }
 
     function withdraw() public payable onlyOwner {
