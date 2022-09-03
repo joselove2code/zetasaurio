@@ -74,7 +74,10 @@ contract ZetaSaurio is ERC721Enumerable, Ownable, ReentrancyGuard {
     function mintAsPartner(address _user, uint256 _mintAmount) public payable nonReentrant {
         validateAndUpdatePartnership(_mintAmount);
 
-        mint(_user, _mintAmount);
+        validateSale(_mintAmount);
+        validateAndUpdatePresale(_user, _mintAmount);
+
+        mintMany(_user, _mintAmount);
     }
 
     function freeMint(address _user, uint256 _mintAmount) public payable nonReentrant {
@@ -125,7 +128,8 @@ contract ZetaSaurio is ERC721Enumerable, Ownable, ReentrancyGuard {
         uint256 currentPrice = presaleIsActive() ? presalePrice : salePrice;
 
         if (partnershipExists(msg.sender)) {
-            return currentPrice * partnerships[msg.sender].discountPercent / 100;
+            uint256 discount = currentPrice * partnerships[msg.sender].discountPercent / 100;
+            return currentPrice - discount;
         }
 
         return currentPrice;
