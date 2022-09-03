@@ -1,7 +1,8 @@
 const seventyTwoHours = 72 * 60 * 60;
 const expect = require("./utils/expect");
 const ZetaSaurio = artifacts.require("ZetaSaurio");
-const getCurrentTimestamp = () => Math.floor(new Date().getTime() / 1000);
+const getCurrentTimestamp = require("./utils/get-current-timestamp");
+const { CANT_MINT_THESE_MANY_NFTS_AT_ONCE } = require("./utils/errors");
 
 contract("ZetaSaurio/mint", async accounts => {
   let contract;
@@ -33,6 +34,16 @@ contract("ZetaSaurio/mint", async accounts => {
     await contract.scheduleSale(now);
 
     await expect(contract.mint(account, maxSupply + 1)).toThrow("Supply left is not enough");
+  });
+
+  it("should not mint more than batchMintLimit", async () => {
+    const now = getCurrentTimestamp();
+    const account = accounts[2];
+    const batchMintLimit = await contract.batchMintLimit();
+
+    await contract.scheduleSale(now);
+
+    await expect(contract.mint(account, batchMintLimit + 1)).toThrow(CANT_MINT_THESE_MANY_NFTS_AT_ONCE);
   });
 
   it("should require to pay enough for minting", async () => {

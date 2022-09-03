@@ -1,11 +1,18 @@
 const expect = require("./utils/expect");
 const ZetaSaurio = artifacts.require("ZetaSaurio");
+const getCurrentTimestamp = require("./utils/get-current-timestamp");
+const {
+  NOT_THE_OWNER,
+  FREE_MINT_ACCESS_DENIED,
+  DISCOUNTED_MINT_ACCESS_DENIED,
+  NOT_ENOUGH_FREE_MINTS_LEFT,
+  NOT_ENOUGH_SUPPLY_LEFT,
+  NOT_ENOUGH_PARTNER_MINTS_LEFT,
+  PARTNERSHIP_ALREADY_EXISTS,
+  PARTNERSHIP_DOES_NOT_EXISTS,
+} = require("./utils/errors");
 
 const seventyTwoHours = 72 * 60 * 60;
-const notTheOwnerError = "Ownable: caller is not the owner";
-const partnershipAlreadyExistsError = "Partnership already exists";
-const partnershipDoesNotExistError = "Partnership does not exist";
-const getCurrentTimestamp = () => Math.floor(new Date().getTime() / 1000);
 
 contract("ZetaSaurio/partnerships", async accounts => {
   let contract;
@@ -32,7 +39,7 @@ contract("ZetaSaurio/partnerships", async accounts => {
         reservedUntilTimestamp,
         { from: accounts[1] }
       )
-    ).toThrow(notTheOwnerError);
+    ).toThrow(NOT_THE_OWNER);
   });
 
   it("should only allow owner to delete partnerships", async () => {
@@ -40,7 +47,19 @@ contract("ZetaSaurio/partnerships", async accounts => {
 
     await expect(
       contract.deletePartnership(partner,{ from: accounts[1] })
-    ).toThrow(notTheOwnerError);
+    ).toThrow(NOT_THE_OWNER);
+  });
+
+  it("should not allow non partners to free mint", async () => {
+    const account = accounts[0];
+
+    await expect(contract.freeMint(account, 3)).toThrow(FREE_MINT_ACCESS_DENIED);
+  });
+
+  it("should not allow non partners access discounted mint", async () => {
+    const account = accounts[0];
+
+    await expect(contract.mintAsPartner(account, 3)).toThrow(DISCOUNTED_MINT_ACCESS_DENIED);
   });
 
   it("partnership should not exist before creating it", async () => {
@@ -71,7 +90,7 @@ contract("ZetaSaurio/partnerships", async accounts => {
     assert.equal(true, partnershipExists);
   });
 
-  it("partnership supply should be reserve until reserved timestamp", async () => {
+  it("partnership supply should be reserved until reserved timestamp", async () => {
     const partner = accounts[2];
     const label = "BoredApeYachtClub";
     const discountPercent = 20;
@@ -92,7 +111,7 @@ contract("ZetaSaurio/partnerships", async accounts => {
     assert.equal(true, partnershipSupplyIsReserved);
   });
 
-  it("partnership supply should not be reserve beyond reserved timestamp", async () => {
+  it("partnership supply should not be reserved beyond reserved timestamp", async () => {
     const partner = accounts[2];
     const label = "BoredApeYachtClub";
     const discountPercent = 20;
@@ -113,7 +132,28 @@ contract("ZetaSaurio/partnerships", async accounts => {
     assert.equal(false, partnershipSupplyIsReserved);
   });
 
-  it("partnership total supply should add up", async () => {
+  it("partnership total supply should add up correctly before reserved timestamp", async () => {
+    const partner = accounts[2];
+    const label = "BoredApeYachtClub";
+    const discountPercent = 20;
+    const discountedSupply = 100;
+    const freeToMintSupply = 50;
+    const reservedUntilTimestamp = getCurrentTimestamp() + 1;
+    
+    await contract.createPartnership(
+      partner,
+      label,
+      discountPercent,
+      discountedSupply,
+      freeToMintSupply,
+      reservedUntilTimestamp
+    );
+    const partnershipTotalSupply = await contract.partnershipReservedSupply(partner);
+
+    assert.equal(150, partnershipTotalSupply);
+  });
+
+  it("partnership total supply should add up correctly after reserved timestamp", async () => {
     const partner = accounts[2];
     const label = "BoredApeYachtClub";
     const discountPercent = 20;
@@ -129,9 +169,9 @@ contract("ZetaSaurio/partnerships", async accounts => {
       freeToMintSupply,
       reservedUntilTimestamp
     );
-    const partnershipTotalSupply = await contract.partnershipTotalSupply(partner);
+    const partnershipTotalSupply = await contract.partnershipReservedSupply(partner);
 
-    assert.equal(150, partnershipTotalSupply);
+    assert.equal(0, partnershipTotalSupply);
   });
 
   it("should not allow to create duplicated partnership", async () => {
@@ -160,7 +200,7 @@ contract("ZetaSaurio/partnerships", async accounts => {
         freeToMintSupply,
         reservedUntilTimestamp
       )
-    ).toThrow(partnershipAlreadyExistsError);
+    ).toThrow(PARTNERSHIP_ALREADY_EXISTS);
   });
 
   it("should not allow to delete non-existent partnership", async () => {
@@ -168,7 +208,7 @@ contract("ZetaSaurio/partnerships", async accounts => {
 
     await expect(
       contract.deletePartnership(partner)
-    ).toThrow(partnershipDoesNotExistError);
+    ).toThrow(PARTNERSHIP_DOES_NOT_EXISTS);
   });
 
   it("should create partnership correctly", async () => {
@@ -249,6 +289,117 @@ contract("ZetaSaurio/partnerships", async accounts => {
 
     const partnership2 = await contract.partnerships(partner2);
     assert.equal(label2, partnership2.label);
+  });
+
+  it("should not allow to free mint beyond supply", async () => {
+    const partner = accounts[0];
+    const label = "BoredApeYachtClub";
+    const discountPercent = 20;
+    const discountedSupply = 100;
+    const freeToMintSupply = 50;
+    const reservedUntilTimestamp = getCurrentTimestamp() + seventyTwoHours;
+    const maxSupply = await contract.maxSupply();
+    const supplyLeftPlusOne = maxSupply - discountedSupply + 1;
+    
+    await contract.createPartnership(
+      partner,
+      label,
+      discountPercent,
+      discountedSupply,
+      freeToMintSupply,
+      reservedUntilTimestamp
+    );
+
+    await expect(contract.freeMint(partner, supplyLeftPlusOne)).toThrow(NOT_ENOUGH_SUPPLY_LEFT);
+  });
+
+  it("should not allow to free mint beyond free mint supply", async () => {
+    const partner = accounts[0];
+    const label = "BoredApeYachtClub";
+    const discountPercent = 20;
+    const discountedSupply = 100;
+    const freeToMintSupply = 50;
+    const reservedUntilTimestamp = getCurrentTimestamp() + seventyTwoHours;
+    
+    await contract.createPartnership(
+      partner,
+      label,
+      discountPercent,
+      discountedSupply,
+      freeToMintSupply,
+      reservedUntilTimestamp
+    );
+
+    await expect(contract.freeMint(partner, freeToMintSupply + 1)).toThrow(NOT_ENOUGH_FREE_MINTS_LEFT);
+  });
+
+  it("should allow to free mint beyond reserved supply after reserved timestamp", async () => {
+    const partner = accounts[0];
+    const label = "BoredApeYachtClub";
+    const discountPercent = 20;
+    const discountedSupply = 100;
+    const freeToMintSupply = 50;
+    const reservedUntilTimestamp = getCurrentTimestamp() - 1;
+    const maxSupply = await contract.maxSupply();
+    
+    await contract.createPartnership(
+      partner,
+      label,
+      discountPercent,
+      discountedSupply,
+      freeToMintSupply,
+      reservedUntilTimestamp
+    );
+
+    await expect(contract.freeMint(partner, maxSupply)).toThrow(NOT_ENOUGH_FREE_MINTS_LEFT);
+  });
+
+  it("should discount free mint supply correctly", async () => {
+    const partner = accounts[0];
+    const label = "BoredApeYachtClub";
+    const discountPercent = 20;
+    const discountedSupply = 100;
+    const freeToMintSupply = 50;
+    const reservedUntilTimestamp = getCurrentTimestamp() + seventyTwoHours;
+    
+    await contract.createPartnership(
+      partner,
+      label,
+      discountPercent,
+      discountedSupply,
+      freeToMintSupply,
+      reservedUntilTimestamp
+    );
+
+    await contract.freeMint(partner, 20);
+    const partnership = await contract.partnerships(partner);
+
+    assert.equal(30, partnership.freeToMintSupply);
+  });
+
+  it("should not allow partners to mint beyond their discounted supply", async () => {
+    const partner = accounts[0];
+    const label = "BoredApeYachtClub";
+    const discountPercent = 20;
+    const discountedSupply = 4;
+    const freeToMintSupply = 50;
+    const reservedUntilTimestamp = getCurrentTimestamp() + seventyTwoHours;
+    const saleTimestamp = getCurrentTimestamp() - 1;
+
+    await contract.scheduleSale(saleTimestamp);
+    
+    await contract.createPartnership(
+      partner,
+      label,
+      discountPercent,
+      discountedSupply,
+      freeToMintSupply,
+      reservedUntilTimestamp
+    );
+
+    await expect(
+      contract.mintAsPartner(partner, discountedSupply + 1, { value: web3.utils.toWei('1') })
+    ).toThrow(NOT_ENOUGH_PARTNER_MINTS_LEFT);
   });
   
 });

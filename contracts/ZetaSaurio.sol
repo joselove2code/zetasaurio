@@ -67,9 +67,14 @@ contract ZetaSaurio is ERC721Enumerable, Ownable, ReentrancyGuard {
     function mint(address _user, uint256 _mintAmount) public payable nonReentrant {
         validateSale(_mintAmount);
         validateAndUpdatePresale(_user, _mintAmount);
-        validateAndUpdatePartnership(_mintAmount);
 
         mintMany(_user, _mintAmount);
+    }
+
+    function mintAsPartner(address _user, uint256 _mintAmount) public payable nonReentrant {
+        validateAndUpdatePartnership(_mintAmount);
+
+        mint(_user, _mintAmount);
     }
 
     function freeMint(address _user, uint256 _mintAmount) public payable nonReentrant {
@@ -92,8 +97,20 @@ contract ZetaSaurio is ERC721Enumerable, Ownable, ReentrancyGuard {
         return partnerships[_partner].reservedUntilTimestamp >= block.timestamp;
     }
 
-    function partnershipTotalSupply(address _partner) public view returns (uint256) {
-        return partnerships[_partner].discountedSupply + partnerships[_partner].freeToMintSupply;
+    function partnershipReservedFreeToMintSupply() public view returns (uint256) {
+        if(partnershipSupplyIsReserved(msg.sender))  {
+            return partnerships[msg.sender].freeToMintSupply;
+        }
+
+        return 0;
+    }
+
+    function partnershipReservedSupply(address _partner) public view returns (uint256) {
+        if(partnershipSupplyIsReserved(_partner))  {
+            return partnerships[_partner].discountedSupply + partnerships[_partner].freeToMintSupply;
+        }
+
+        return 0;
     }
 
     function presaleIsActive() public view returns (bool) {
@@ -118,9 +135,7 @@ contract ZetaSaurio is ERC721Enumerable, Ownable, ReentrancyGuard {
         uint256 supply = 0;
 
         for (uint256 i = 0; i < partners.length; i++) {
-            if(partnershipSupplyIsReserved(partners[i])) {
-                supply += partnershipTotalSupply(partners[i]);
-            }
+            supply += partnershipReservedSupply(partners[i]);
         }
 
         return supply;
@@ -136,6 +151,7 @@ contract ZetaSaurio is ERC721Enumerable, Ownable, ReentrancyGuard {
         require(saleIsActive() || presaleIsActive(), "Sale is not active");
         require(_mintAmount > 0, "Must mint at least one NFT");
         require(totalSupply() + reservedSupply() + _mintAmount <= maxSupply, "Supply left is not enough");
+        require(_mintAmount < batchMintLimit, "Can't mint these many NFTs at once");
         require(msg.value >= _mintAmount * price(), "Not enough funds to purchase");        
     }
 
@@ -147,16 +163,23 @@ contract ZetaSaurio is ERC721Enumerable, Ownable, ReentrancyGuard {
     }
 
     function validateAndUpdatePartnership(uint256 _mintAmount) internal {
-        if (partnershipExists(msg.sender)) {
-            require(partnerships[msg.sender].discountedSupply >= _mintAmount, "Not enough partner mints left");
-            partnerships[msg.sender].discountedSupply -= _mintAmount;
-        }
+        require(partnershipExists(msg.sender), "Only partners have access to discounted mints");
+        require(_mintAmount <= partnerships[msg.sender].discountedSupply, "Not enough partner mints left");
+
+        partnerships[msg.sender].discountedSupply -= _mintAmount;
     }
 
     function validateAndUpdateFreeMint(uint256 _mintAmount) internal {
-        require(partnershipExists(msg.sender), "Only partners have access to free mints");        
-        require(totalSupply() + _mintAmount + reservedSupply() <= maxSupply, "Supply left is not enough");
-        require(partnerships[msg.sender].freeToMintSupply > _mintAmount, "Not enough partner free mints left");
+        require(partnershipExists(msg.sender), "Only partners have access to free mints");
+        require(
+            totalSupply()
+            + reservedSupply() 
+            + _mintAmount
+            - partnershipReservedFreeToMintSupply()
+            <= maxSupply,
+            "Supply left is not enough"
+        );
+        require(_mintAmount < partnerships[msg.sender].freeToMintSupply, "Not enough partner free mints left");
 
         partnerships[msg.sender].freeToMintSupply -= _mintAmount;
     }
