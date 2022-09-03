@@ -3,6 +3,7 @@ const ZetaSaurio = artifacts.require("ZetaSaurio");
 const getCurrentTimestamp = require("./utils/get-current-timestamp");
 const {
   NOT_THE_OWNER,
+  NOT_ENOUGH_FUNDS,
   FREE_MINT_ACCESS_DENIED,
   DISCOUNTED_MINT_ACCESS_DENIED,
   NOT_ENOUGH_FREE_MINTS_LEFT,
@@ -354,7 +355,7 @@ contract("ZetaSaurio/partnerships", async accounts => {
     await expect(contract.freeMint(partner, maxSupply)).toThrow(NOT_ENOUGH_FREE_MINTS_LEFT);
   });
 
-  it("should discount free mint supply correctly", async () => {
+  it("should decrement free mint supply correctly", async () => {
     const partner = accounts[0];
     const label = "BoredApeYachtClub";
     const discountPercent = 20;
@@ -400,6 +401,61 @@ contract("ZetaSaurio/partnerships", async accounts => {
     await expect(
       contract.mintAsPartner(partner, discountedSupply + 1, { value: web3.utils.toWei('1') })
     ).toThrow(NOT_ENOUGH_PARTNER_MINTS_LEFT);
+  });
+
+  it("should pay enough for discounted mint", async () => {
+    const now = getCurrentTimestamp();
+    const partner = accounts[0];
+    const label = "BoredApeYachtClub";
+    const discountPercent = 20;
+    const discountedSupply = 100;
+    const freeToMintSupply = 50;
+    const reservedUntilTimestamp = getCurrentTimestamp() + seventyTwoHours;
+    
+    await contract.createPartnership(
+      partner,
+      label,
+      discountPercent,
+      discountedSupply,
+      freeToMintSupply,
+      reservedUntilTimestamp
+    );
+
+    await contract.scheduleSale(now);
+    const price = await contract.price();
+    const priceOf3Minus1 = 3 * price - web3.utils.toWei('0.01');
+
+    await expect(
+      contract.mintAsPartner(partner, 3, { value: priceOf3Minus1 })
+    ).toThrow(NOT_ENOUGH_FUNDS);
+  });
+
+  it("should decrement discounted mint supply correctly", async () => {
+    const now = getCurrentTimestamp();
+    const partner = accounts[0];
+    const label = "BoredApeYachtClub";
+    const discountPercent = 20;
+    const discountedSupply = 100;
+    const freeToMintSupply = 50;
+    const reservedUntilTimestamp = getCurrentTimestamp() + seventyTwoHours;
+    
+    await contract.createPartnership(
+      partner,
+      label,
+      discountPercent,
+      discountedSupply,
+      freeToMintSupply,
+      reservedUntilTimestamp
+    );
+
+    await contract.scheduleSale(now);
+    const price = await contract.price();
+    const priceOf3 = 3 * price;
+
+    await contract.mintAsPartner(partner, 3, { value: priceOf3 });
+    const partnership = await contract.partnerships(partner);
+
+    assert.equal(97, partnership.discountedSupply);
   });
   
 });

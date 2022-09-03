@@ -1,4 +1,5 @@
 module.exports = {
+  NOT_ENOUGH_FUNDS: "Not enough funds to purchase",
   NOT_THE_OWNER: "Ownable: caller is not the owner",
   NOT_ENOUGH_SUPPLY_LEFT: "Supply left is not enough",
   FREE_MINT_ACCESS_DENIED: "Only partners have access to free mints",

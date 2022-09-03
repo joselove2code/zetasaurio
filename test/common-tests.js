@@ -197,7 +197,7 @@ contract("ZetaSaurio/common", async accounts => {
     await expect(contract.reserve(accounts[1], 30, { from: accounts[1] })).toThrow(NOT_THE_OWNER);
   });
 
-  it("should price 0.2 BNB on public sale", async () => {
+  it("should cost 0.2BNB on public sale", async () => {
     const now = getCurrentTimestamp();
 
     await contract.scheduleSale(now);
@@ -206,7 +206,31 @@ contract("ZetaSaurio/common", async accounts => {
     assert.equal(price, web3.utils.toWei('0.2'));
   });
 
-  it("should price 0.15 BNB on presale", async () => {
+  it("should cost 0.2BNB - discount for partners on public sale", async () => {
+    const now = getCurrentTimestamp();
+    const partner = accounts[0];
+    const label = "BoredApeYachtClub";
+    const discountPercent = 20;
+    const discountedSupply = 100;
+    const freeToMintSupply = 50;
+    const reservedUntilTimestamp = getCurrentTimestamp() + seventyTwoHours;
+    
+    await contract.createPartnership(
+      partner,
+      label,
+      discountPercent,
+      discountedSupply,
+      freeToMintSupply,
+      reservedUntilTimestamp
+    );
+
+    await contract.scheduleSale(now);
+    const price = await contract.price();
+
+    assert.equal(web3.utils.toWei('0.16'), price);
+  });
+
+  it("should cost 0.15BNB on presale", async () => {
     const now = getCurrentTimestamp();
     const seventyTwoHoursFromNow = now + seventyTwoHours;
     
@@ -214,5 +238,30 @@ contract("ZetaSaurio/common", async accounts => {
     const price = await contract.price();
 
     assert.equal(price, web3.utils.toWei('0.15'));
+  });
+
+  it("should cost 0.15BNB - discount for partners on presale", async () => {
+    const now = getCurrentTimestamp();
+    const seventyTwoHoursFromNow = now + seventyTwoHours;
+    const partner = accounts[0];
+    const label = "BoredApeYachtClub";
+    const discountPercent = 20;
+    const discountedSupply = 100;
+    const freeToMintSupply = 50;
+    const reservedUntilTimestamp = getCurrentTimestamp() + seventyTwoHours;
+    
+    await contract.createPartnership(
+      partner,
+      label,
+      discountPercent,
+      discountedSupply,
+      freeToMintSupply,
+      reservedUntilTimestamp
+    );
+    
+    await contract.schedulePresale(now, seventyTwoHoursFromNow);
+    const price = await contract.price();
+
+    assert.equal(web3.utils.toWei('0.12'), price);
   });
 });
