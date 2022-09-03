@@ -2,7 +2,10 @@ const seventyTwoHours = 72 * 60 * 60;
 const expect = require("./utils/expect");
 const ZetaSaurio = artifacts.require("ZetaSaurio");
 const getCurrentTimestamp = require("./utils/get-current-timestamp");
-const { CANT_MINT_THESE_MANY_NFTS_AT_ONCE } = require("./utils/errors");
+const {
+  NOT_ENOUGH_SUPPLY_LEFT,
+  CANT_MINT_THESE_MANY_NFTS_AT_ONCE,
+} = require("./utils/errors");
 
 contract("ZetaSaurio/mint", async accounts => {
   let contract;
@@ -33,7 +36,32 @@ contract("ZetaSaurio/mint", async accounts => {
 
     await contract.scheduleSale(now);
 
-    await expect(contract.mint(account, maxSupply + 1)).toThrow("Supply left is not enough");
+    await expect(contract.mint(account, maxSupply + 1)).toThrow(NOT_ENOUGH_SUPPLY_LEFT);
+  });
+
+  it("should not mint beyond reservedSupply", async () => {
+    const now = getCurrentTimestamp();
+    const partner = accounts[0];
+    const label = "BoredApeYachtClub";
+    const discountPercent = 20;
+    const discountedSupply = 100;
+    const freeToMintSupply = 50;
+    const maxSupply = (await contract.maxSupply()).toNumber();
+    const reservedUntilTimestamp = getCurrentTimestamp() + seventyTwoHours;
+    const reservedSupply = freeToMintSupply - discountedSupply;
+    
+    await contract.createPartnership(
+      partner,
+      label,
+      discountPercent,
+      discountedSupply,
+      freeToMintSupply,
+      reservedUntilTimestamp
+    );
+
+    await contract.scheduleSale(now);
+
+    await expect(contract.mint(partner, maxSupply - reservedSupply + 1)).toThrow(NOT_ENOUGH_SUPPLY_LEFT);
   });
 
   it("should not mint more than batchMintLimit", async () => {

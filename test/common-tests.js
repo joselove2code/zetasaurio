@@ -2,8 +2,8 @@ const seventyTwoHours = 72 * 60 * 60;
 const tenBNB = web3.utils.toWei('10');
 const expect = require("./utils/expect");
 const ZetaSaurio = artifacts.require("ZetaSaurio");
-const notTheOwnerError = "Ownable: caller is not the owner";
-const getCurrentTimestamp = () => Math.floor(new Date().getTime() / 1000);
+const { NOT_THE_OWNER, NOT_ENOUGH_SUPPLY_LEFT } = require("./utils/errors");
+const getCurrentTimestamp = require("./utils/get-current-timestamp");
 
 contract("ZetaSaurio/common", async accounts => {
   let contract;
@@ -106,6 +106,29 @@ contract("ZetaSaurio/common", async accounts => {
     assert.equal(presaleIsActive, false);
   });
 
+  it("should not reserve beyond reserved supply", async () => {
+    const account = accounts[0];
+    const partner = accounts[2];
+    const label = "BoredApeYachtClub";
+    const discountPercent = 20;
+    const discountedSupply = 100;
+    const freeToMintSupply = 50;
+    const maxSupply = (await contract.maxSupply()).toNumber();
+    const reservedUntilTimestamp = getCurrentTimestamp() + seventyTwoHours;
+    const reservedSupply = freeToMintSupply - discountedSupply;
+    
+    await contract.createPartnership(
+      partner,
+      label,
+      discountPercent,
+      discountedSupply,
+      freeToMintSupply,
+      reservedUntilTimestamp
+    );
+
+    await expect(contract.reserve(account, maxSupply - reservedSupply + 1)).toThrow(NOT_ENOUGH_SUPPLY_LEFT);
+  });
+
   it("should reserve correctly", async () => {
     const supplyBefore = await contract.totalSupply();
     await contract.reserve(accounts[0], 5);
@@ -147,7 +170,7 @@ contract("ZetaSaurio/common", async accounts => {
     const newBaseURI = "A brand new base uri";
 
     await expect(contract.setBaseURI(newBaseURI, { from: accounts[1] }))
-      .toThrow(notTheOwnerError);
+      .toThrow(NOT_THE_OWNER);
   });
 
   it("should only allow owner to schedule presale", async () => {
@@ -155,23 +178,23 @@ contract("ZetaSaurio/common", async accounts => {
     const seventyTwoHoursFromNow = now + seventyTwoHours;
 
     await expect(contract.schedulePresale(now, seventyTwoHoursFromNow, { from: accounts[1] }))
-      .toThrow(notTheOwnerError);
+      .toThrow(NOT_THE_OWNER);
   });
 
   it("should only allow owner to schedule sale", async () => {
     const now = getCurrentTimestamp();
 
     await expect(contract.scheduleSale(now, { from: accounts[1] }))
-      .toThrow(notTheOwnerError);
+      .toThrow(NOT_THE_OWNER);
   });
 
   it("should only allow owner to withdraw", async () => {
     await expect(contract.withdraw({ from: accounts[1] }))
-      .toThrow(notTheOwnerError);
+      .toThrow(NOT_THE_OWNER);
   });
 
   it("should only allow owner to reserve", async () => {
-    await expect(contract.reserve(accounts[1], 30, { from: accounts[1] })).toThrow(notTheOwnerError);
+    await expect(contract.reserve(accounts[1], 30, { from: accounts[1] })).toThrow(NOT_THE_OWNER);
   });
 
   it("should price 0.2 BNB on public sale", async () => {
