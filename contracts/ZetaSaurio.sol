@@ -31,10 +31,23 @@ import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 contract ZetaSaurio is ERC721Enumerable, Ownable, ReentrancyGuard {
     using Strings for uint256;
 
-    address public manager;
+    struct Partnership {
+        // The human-readable identifier of the partnership
+        string label;
+        // The discount percent given to the partner
+        uint256 discountPercent;
+        // The amount of discounted tokens given to the partner
+        uint256 discountedSupply;
+        // The amount of free to mint tokens given to the partner
+        uint256 freeToMintSupply;
+        // The timestamp until which the supply will be reserved
+        uint reservedUntilTimestamp;
+        // Just a marker to know if a patnership exists
+        bool exists;
+    }
 
+    address[] public partners;
     string public baseURI = "";
-
     uint public saleStartTimestamp;
     uint public presaleEndTimestamp;
     uint public presaleStartTimestamp;
@@ -43,30 +56,64 @@ contract ZetaSaurio is ERC721Enumerable, Ownable, ReentrancyGuard {
     uint256 public constant presaleMintPerAddressLimit = 3;
     uint256 public constant salePrice = 0.2 ether; // 0.2 BNB
     uint256 public constant presalePrice = 0.15 ether; // 0.15 BNB
-
     mapping(address => bool) public hasPresaleAccess;
     mapping(address => uint256) public mintedPerAddress;
+    mapping(address => Partnership) public partnerships;
 
     constructor() ERC721("ZetaSaurio", "ZS") {}
 
-    /**
-     * @dev Base URI for computing {tokenURI} in {ERC721} parent contract.
-     */
-    function _baseURI() internal view virtual override returns (string memory) {
-        return baseURI;
+    // Minting
+
+    function mint(address _user, uint256 _mintAmount) public payable nonReentrant {
+        validateSale(_mintAmount);
+        validateAndUpdatePresale(_user, _mintAmount);
+
+        mintMany(_user, _mintAmount);
     }
 
-    function setBaseURI(string memory _newBaseURI) public onlyOwner {
-        baseURI = _newBaseURI;
+    function mintAsPartner(address _user, uint256 _mintAmount) public payable nonReentrant {
+        validateAndUpdatePartnership(_mintAmount);
+
+        validateSale(_mintAmount);
+        validateAndUpdatePresale(_user, _mintAmount);
+
+        mintMany(_user, _mintAmount);
     }
 
-    function schedulePresale(uint _presaleStartTimestamp, uint _presaleEndTimestamp   ) public onlyOwner {
-        presaleEndTimestamp = _presaleEndTimestamp;
-        presaleStartTimestamp = _presaleStartTimestamp;
+    function freeMint(address _user, uint256 _mintAmount) public payable nonReentrant {
+        validateAndUpdateFreeMint(_mintAmount);
+
+        mintMany(_user, _mintAmount);
     }
 
-    function scheduleSale(uint _saleStartTimestamp) public onlyOwner {
-        saleStartTimestamp = _saleStartTimestamp;
+    // Utility
+
+    function partnersCount() public view returns (uint256) {
+        return partners.length;
+    }
+
+    function partnershipExists(address _partner) public view returns (bool) {
+        return partnerships[_partner].exists;
+    }
+
+    function partnershipSupplyIsReserved(address _partner) public view returns (bool) {
+        return partnerships[_partner].reservedUntilTimestamp >= block.timestamp;
+    }
+
+    function partnershipReservedFreeToMintSupply() public view returns (uint256) {
+        if(partnershipSupplyIsReserved(msg.sender))  {
+            return partnerships[msg.sender].freeToMintSupply;
+        }
+
+        return 0;
+    }
+
+    function partnershipReservedSupply(address _partner) public view returns (uint256) {
+        if(partnershipSupplyIsReserved(_partner))  {
+            return partnerships[_partner].discountedSupply + partnerships[_partner].freeToMintSupply;
+        }
+
+        return 0;
     }
 
     function presaleIsActive() public view returns (bool) {
@@ -77,12 +124,88 @@ contract ZetaSaurio is ERC721Enumerable, Ownable, ReentrancyGuard {
         return saleStartTimestamp != 0 && saleStartTimestamp <= block.timestamp;
     }
 
-    function price() public view virtual returns (uint256) {
-        return presaleIsActive() ? presalePrice : salePrice;
+    function price() public view returns (uint256) {
+        uint256 currentPrice = presaleIsActive() ? presalePrice : salePrice;
+
+        if (partnershipExists(msg.sender)) {
+            uint256 discount = currentPrice * partnerships[msg.sender].discountPercent / 100;
+            return currentPrice - discount;
+        }
+
+        return currentPrice;
+    }
+
+    function reservedSupply() public view returns (uint256) {
+        uint256 supply = 0;
+
+        for (uint256 i = 0; i < partners.length; i++) {
+            supply += partnershipReservedSupply(partners[i]);
+        }
+
+        return supply;
     }
 
     function enoughPresaleMintingsLeft(address _user, uint256 _mintAmount) public view returns (bool) {
         return mintedPerAddress[_user] + _mintAmount <= presaleMintPerAddressLimit;
+    }
+
+    // Internal
+
+    function validateSale(uint256 _mintAmount) internal view {
+        require(saleIsActive() || presaleIsActive(), "Sale is not active");
+        require(_mintAmount > 0, "Must mint at least one NFT");
+        require(totalSupply() + reservedSupply() + _mintAmount <= maxSupply, "Supply left is not enough");
+        require(_mintAmount <= batchMintLimit, "Can't mint these many NFTs at once");
+        require(msg.value >= _mintAmount * price(), "Not enough funds to purchase");        
+    }
+
+    function validateAndUpdatePresale(address _user, uint256 _mintAmount) internal view {
+        if (presaleIsActive()) {
+            require(hasPresaleAccess[_user], "Presale access denied");
+            require(enoughPresaleMintingsLeft(_user, _mintAmount), "Not enough presale mintings left");
+        }
+    }
+
+    function validateAndUpdatePartnership(uint256 _mintAmount) internal {
+        require(partnershipExists(msg.sender), "Only partners have access to discounted mints");
+        require(_mintAmount <= partnerships[msg.sender].discountedSupply, "Not enough partner mints left");
+
+        partnerships[msg.sender].discountedSupply -= _mintAmount;
+    }
+
+    function validateAndUpdateFreeMint(uint256 _mintAmount) internal {
+        require(partnershipExists(msg.sender), "Only partners have access to free mints");
+        require(
+            totalSupply()
+            + reservedSupply() 
+            + _mintAmount
+            - partnershipReservedFreeToMintSupply()
+            <= maxSupply,
+            "Supply left is not enough"
+        );
+        require(_mintAmount < partnerships[msg.sender].freeToMintSupply, "Not enough partner free mints left");
+
+        partnerships[msg.sender].freeToMintSupply -= _mintAmount;
+    }
+
+    function mintMany(address _user, uint256 _mintAmount) internal {
+        uint256 supply = totalSupply();
+        mintedPerAddress[_user] += _mintAmount;
+
+        for (uint256 i = 1; i <= _mintAmount; i++) {
+            _safeMint(_user, supply + i);
+        }
+    }
+
+    // Only owner
+
+    function scheduleSale(uint _saleStartTimestamp) public onlyOwner {
+        saleStartTimestamp = _saleStartTimestamp;
+    }
+
+    function schedulePresale(uint _presaleStartTimestamp, uint _presaleEndTimestamp) public onlyOwner {
+        presaleEndTimestamp = _presaleEndTimestamp;
+        presaleStartTimestamp = _presaleStartTimestamp;
     }
 
     function grantPresaleAccess(address[] calldata _users) public onlyOwner {
@@ -97,39 +220,63 @@ contract ZetaSaurio is ERC721Enumerable, Ownable, ReentrancyGuard {
         }
     }
 
+    function createPartnership(
+        address _partner,
+        string memory _label,
+        uint256 _discountPercent,
+        uint256 _discountedSupply,
+        uint256 _freeToMintSupply,
+        uint _reservedUntilTimestamp
+    ) public onlyOwner {
+        require(!partnershipExists(_partner), "Partnership already exists");
+        
+        partners.push(_partner);
+
+        partnerships[_partner] = Partnership(
+            _label,
+            _discountPercent,
+            _discountedSupply,
+            _freeToMintSupply,
+            _reservedUntilTimestamp,
+            true
+        );
+    }
+
+    function deletePartnership(address _partner) public onlyOwner {        
+        require(partnershipExists(_partner), "Partnership does not exist");
+
+        partnerships[_partner].exists = false;
+
+        for (uint256 index = 0; index < partners.length; index++) {
+            if (partners[index] == _partner) {
+                partners[index] = partners[partners.length - 1];
+                partners.pop();
+                break;
+            }
+        }
+    }
+
+    function reserve(address _user, uint256 _mintAmount) public onlyOwner {
+        require(totalSupply() + _mintAmount + reservedSupply() <= maxSupply, "Supply left is not enough");
+
+        mintMany(_user, _mintAmount);
+    }
+
     function withdraw() public payable onlyOwner {
         (bool sent,) = payable(owner()).call{value: address(this).balance}("");
-        require(sent, "Failed to send Ether");
+        require(sent, "Failed to withdraw");
+    }
+
+    // Base URI
+
+    function setBaseURI(string memory _newBaseURI) public onlyOwner {
+        baseURI = _newBaseURI;
     }
 
     /**
-     * Reserve zetas for the team and giveaways.
+     * @dev Base URI for computing {tokenURI} in {ERC721} parent contract.
      */
-    function reserve(uint256 _amount) public onlyOwner {
-        uint256 supply = totalSupply();
-
-        for (uint256 i = 1; i <= _amount; i++) {
-            _safeMint(msg.sender, supply + i);
-        }
-    }
-
-    function mint(address _user, uint256 _mintAmount) public payable nonReentrant {
-        uint256 supply = totalSupply();
-
-        require(saleIsActive() || presaleIsActive(), "Sale is not active");
-        require(_mintAmount > 0, "Must mint at least one NFT");
-        require(supply + _mintAmount <= maxSupply, "Supply left is not enough");
-        require(msg.value >= _mintAmount * price(), "Not enough funds to purchase");
-        require(_mintAmount <= batchMintLimit, "Can't mint these many NFTs at once");
-
-        if (presaleIsActive()) {
-            require(hasPresaleAccess[_user], "Presale access denied");
-            require(enoughPresaleMintingsLeft(_user, _mintAmount), "Not enough presale mintings left");
-        }
-
-        mintedPerAddress[_user] += _mintAmount;
-        for (uint256 i = 1; i <= _mintAmount; i++) {
-            _safeMint(_user, supply + i);
-        }
+    function _baseURI() internal view virtual override returns (string memory) {
+        return baseURI;
     }
 }
