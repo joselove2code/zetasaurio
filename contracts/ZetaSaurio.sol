@@ -155,7 +155,7 @@ contract ZetaSaurio is ERC721Enumerable, Ownable, ReentrancyGuard {
         require(saleIsActive() || presaleIsActive(), "Sale is not active");
         require(_mintAmount > 0, "Must mint at least one NFT");
         require(totalSupply() + reservedSupply() + _mintAmount <= maxSupply, "Supply left is not enough");
-        require(_mintAmount < batchMintLimit, "Can't mint these many NFTs at once");
+        require(_mintAmount <= batchMintLimit, "Can't mint these many NFTs at once");
         require(msg.value >= _mintAmount * price(), "Not enough funds to purchase");        
     }
 

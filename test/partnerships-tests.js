@@ -12,7 +12,6 @@ const {
   PARTNERSHIP_ALREADY_EXISTS,
   PARTNERSHIP_DOES_NOT_EXISTS,
 } = require("./utils/errors");
-
 const seventyTwoHours = 72 * 60 * 60;
 
 contract("ZetaSaurio/partnerships", async accounts => {
