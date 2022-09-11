@@ -7,24 +7,22 @@ from .config import config
 
 
 class Feature:
-    def __init__(self, name: str, path: str, rarity: int, set: str = None):
+    def __init__(self, name: str, path: str, rarity: int):
         self.name = name
         self.path = path
         self.rarity = rarity
         self.layer = None
-        self.set = set
 
 
     def __repr__(self) -> str:
-        return 'Feature{name="%s", path="%s", rarity=%f, set=%s}' % (
-            self.name, self.path, self.rarity, self.set
+        return 'Feature{name="%s", path="%s", rarity=%f}' % (
+            self.name, self.path, self.rarity
         )
 
     def generate_metadata(self):
         return {
             "trait_type": self.layer.name,
-            "value": self.name,
-            "set": self.set
+            "value": self.name
         }
 
 

@@ -10,69 +10,69 @@
   "order_separator": "#",
   "rarity_separator": "%",
   "random_seed": 39,
-  "omit_in_dna": ["Background"],
+  "omit_in_dna": ["background"],
   "rules": [
     {
-      "layer_from": "Skin",
+      "layer_from": "skin",
       "feature_from": [
-        "M87 skin",
-        "What if...? skin",
-        "psychedelic skin",
-        "zombie skin"
+        "m87",
+        "cyborg",
+        "psychedelic",
+        "zombie"
       ],
-      "layer_to": "Outfit",
-      "feature_to": "no outfit",
+      "layer_to": "outfit",
+      "feature_to": "none",
       "probability": 0.75
     },
     {
-      "layer_from": "Outfit",
+      "layer_from": "outfit",
       "feature_from": [
-        "astronaut outfit",
-        "Picasso outfit",
-        "ñom ñom outfit"
+        "astronaut",
+        "picasso",
+        "ñom ñom"
       ],
-      "layer_to": "Crest",
-      "feature_to": "hairstyle crest"
+      "layer_to": "crest",
+      "feature_to": "hairstyle"
     },
     {
-      "layer_from": "Outfit",
+      "layer_from": "outfit",
       "feature_from": [
-        "astronaut outfit",
-        "Picasso outfit",
-        "ñom ñom outfit"
+        "astronaut",
+        "picasso",
+        "ñom ñom"
       ],
-      "layer_to": "Hat",
-      "feature_to": "no hat"
+      "layer_to": "hat",
+      "feature_to": "none"
     },
     {
-      "layer_from": "Outfit",
+      "layer_from": "outfit",
       "feature_from": [
-        "astronaut outfit"
+        "astronaut "
       ],
-      "layer_to": "Glasses",
-      "feature_to": "no glasses"
+      "layer_to": "glasses",
+      "feature_to": "none"
     },
     {
-      "layer_from": "Hat",
+      "layer_from": "hat",
       "feature_from": [
-        "beach hat",
-        "cap hat",
-        "Jones hat",
-        "military hat",
-        "peaky hat",
-        "sailor hat"
+        "beach",
+        "cap",
+        "jones",
+        "military",
+        "peaky",
+        "sailor"
       ],
-      "layer_to": "Crest",
-      "feature_to": "hairstyle crest"
+      "layer_to": "crest",
+      "feature_to": "hairstyle"
     },
     {
-      "layer_from": "Eyes",
+      "layer_from": "eyes",
       "feature_from": [
-        "galaxy eyes",
-        "zombie eyes"
+        "m87",
+        "zombie"
       ],
-      "layer_to": "Glasses",
-      "feature_to": "no glasses"
+      "layer_to": "glasses",
+      "feature_to": "none"
     }
   ]
 }
